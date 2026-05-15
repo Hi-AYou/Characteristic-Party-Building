@@ -1,5 +1,8 @@
 # 复旦大学大数据学院党支部信息管理系统
 
+![界面展示2](figures/界面展示2.png)
+![界面展示4](figures/界面展示4.png)
+
 ## 技术栈
 - **后端**: Flask + SQLAlchemy + SQLite + Flask-JWT-Extended
 - **前端**: React 18 + Vite + Ant Design 5 + Zustand + Axios
