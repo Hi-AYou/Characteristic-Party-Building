@@ -19,9 +19,11 @@ venv/
 env/
 .venv/
 
-# 数据库文件（保留项目数据库）
-# *.db
-# *.sqlite3
+# 本地数据库（勿提交）
+backend/instance/
+*.db
+*.db.bak
+*.sqlite3
 
 # Node.js
 node_modules/
