@@ -12,21 +12,30 @@ members_bp = Blueprint("members", __name__, url_prefix="/api/members")
 # 允许批量修改的字段白名单
 BATCH_ALLOWED_FIELDS = {
     "application_date", "youth_league_graduation_date",
-    "activist_confirmed_date", "activist_training_graduation_date",
+    "activist_confirmed_date", "activist_committee_filing_date",
+    "activist_training_graduation_date",
     "dev_target_confirmed_date", "dev_training_graduation_date",
-    "probationary_date", "full_member_date",
-    "expected_graduation", "political_status",
+    "probationary_committee_pre_review_date", "probationary_committee_approval_date",
+    "probationary_date", "party_oath_date",
+    "full_member_committee_pre_review_date", "full_member_branch_meeting_date",
+    "full_member_committee_approval_date", "full_member_date",
+    "expected_graduation",
+    "is_overseas", "retain_party_membership",
 }
 
 DATE_FIELDS = [
     "birthdate", "application_date", "youth_league_graduation_date",
-    "activist_confirmed_date", "activist_training_graduation_date",
+    "activist_confirmed_date", "activist_committee_filing_date",
+    "activist_training_graduation_date",
     "dev_target_confirmed_date", "dev_training_graduation_date",
-    "probationary_date", "full_member_date",
+    "probationary_committee_pre_review_date", "probationary_committee_approval_date",
+    "probationary_date", "party_oath_date",
+    "full_member_committee_pre_review_date", "full_member_branch_meeting_date",
+    "full_member_committee_approval_date", "full_member_date",
 ]
 STRING_FIELDS = [
     "name", "gender", "department", "major", "education_type",
-    "phone", "email", "political_status", "party_role_in_branch",
+    "phone", "email", "party_role_in_branch",
     "notes", "expected_graduation",
 ]
 
@@ -38,6 +47,43 @@ def _build_query(claims):
     if role in ("secretary", "viewer"):
         q = q.filter_by(branch_id=branch_id)
     return q, role
+
+
+def _training_status(member, kind):
+    """团校 / 积极分子班 / 发展对象班 培训状态"""
+    if kind == "youth_league":
+        graduation, confirmed = member.youth_league_graduation_date, member.application_date
+    elif kind == "activist":
+        graduation = member.activist_training_graduation_date
+        confirmed = member.activist_confirmed_date
+    elif kind == "dev":
+        graduation = member.dev_training_graduation_date
+        confirmed = member.dev_target_confirmed_date
+    else:
+        return None
+    if graduation:
+        return "已结业"
+    if confirmed:
+        return "培训中"
+    return "未培训"
+
+
+def _apply_post_query_filters(members, args):
+    """阶段、培训班状态等需在查询结果上二次筛选"""
+    stage_filter = args.get("stages") or args.get("stage")
+    if stage_filter:
+        stages = [s.strip() for s in stage_filter.split(",") if s.strip()]
+        if stages:
+            members = [m for m in members if m.current_stage in stages]
+    for param, kind in (
+        ("youth_league_training_status", "youth_league"),
+        ("activist_training_status", "activist"),
+        ("dev_training_status", "dev"),
+    ):
+        status = args.get(param)
+        if status:
+            members = [m for m in members if _training_status(m, kind) == status]
+    return members
 
 
 def _apply_filters(q, args):
@@ -61,10 +107,16 @@ def _apply_filters(q, args):
 
     if args.get("enrollment_year"):
         q = q.filter_by(enrollment_year=int(args["enrollment_year"]))
+    if args.get("gender"):
+        q = q.filter_by(gender=args["gender"])
     if args.get("department"):
-        q = q.filter(Member.department.ilike(f"%{args['department']}%"))
+        q = q.filter_by(department=args["department"])
+    if args.get("party_role_in_branch"):
+        q = q.filter_by(party_role_in_branch=args["party_role_in_branch"])
     if args.get("is_overseas") is not None and args.get("is_overseas") != "":
         q = q.filter_by(is_overseas=args["is_overseas"] == "true")
+    if args.get("retain_party_membership") is not None and args.get("retain_party_membership") != "":
+        q = q.filter_by(retain_party_membership=args["retain_party_membership"] == "true")
     if args.get("search"):
         kw = f"%{args['search']}%"
         q = q.filter(db.or_(Member.name.ilike(kw), Member.student_id.ilike(kw)))
@@ -116,6 +168,8 @@ def _update_member_fields(member, data):
         member.enrollment_year = data["enrollment_year"]
     if "is_overseas" in data:
         member.is_overseas = bool(data["is_overseas"])
+    if "retain_party_membership" in data:
+        member.retain_party_membership = bool(data["retain_party_membership"])
     if "extra_data" in data and isinstance(data["extra_data"], dict):
         member.extra_data = data["extra_data"]
 
@@ -132,12 +186,7 @@ def list_members():
 
     include_sensitive = role in ("super_admin", "secretary")
 
-    # 多阶段筛选（逗号分隔）
-    stage_filter = request.args.get("stages") or request.args.get("stage")
-    if stage_filter:
-        stages = [s.strip() for s in stage_filter.split(",") if s.strip()]
-        if stages:
-            members = [m for m in members if m.current_stage in stages]
+    members = _apply_post_query_filters(members, request.args)
 
     return jsonify({
         "total": len(members),
@@ -249,6 +298,8 @@ def batch_update():
         for f, v in fields.items():
             if f in DATE_FIELDS:
                 setattr(member, f, _parse_date_str(v))
+            elif f in ("is_overseas", "retain_party_membership"):
+                setattr(member, f, bool(v))
             else:
                 setattr(member, f, v)
         member.updated_by = user_id
@@ -311,12 +362,7 @@ def export_members():
     q = _apply_filters(q, request.args)
     members = q.order_by(Member.name).all()
 
-    # 阶段筛选
-    stage_filter = request.args.get("stages") or request.args.get("stage")
-    if stage_filter:
-        stages = [s.strip() for s in stage_filter.split(",") if s.strip()]
-        if stages:
-            members = [m for m in members if m.current_stage in stages]
+    members = _apply_post_query_filters(members, request.args)
 
     # 按预警类型筛选（从 progress 模块过滤）
     alert_type = request.args.get("alert_type")

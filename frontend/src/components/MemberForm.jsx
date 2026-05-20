@@ -9,21 +9,36 @@ import { createMember, updateMember } from '../api/membersApi'
 
 const { Option } = Select
 
-const POLITICAL_STATUS_OPTIONS = [
-  '入党申请人', '入党积极分子', '发展对象', '中共预备党员', '正式党员',
+const DEPARTMENT_OPTIONS = ['大数据学院', '类脑智能科学与技术研究院']
+const PARTY_ROLE_OPTIONS = [
+  '党支部书记', '党支部副书记', '组织委员', '宣传委员', '纪检委员',
 ]
+
+const BOOL_FORM_FIELDS = ['is_overseas', 'retain_party_membership']
+
+function YesNoSelect(props) {
+  return (
+    <Select allowClear={false} {...props}>
+      <Option value={true}>是</Option>
+      <Option value={false}>否</Option>
+    </Select>
+  )
+}
 
 function TrainingStatusTag({ graduationDate, confirmedDate }) {
   if (graduationDate) return <Tag color="success">已结业</Tag>
   if (confirmedDate)  return <Tag color="processing">培训中</Tag>
-  return <Tag color="default">未参加</Tag>
+  return <Tag color="default">未培训</Tag>
 }
 
 // 普通日期字段（不含培训班结业，单独处理）
 const DATE_FIELDS = [
   'birthdate', 'application_date',
-  'activist_confirmed_date', 'dev_target_confirmed_date',
-  'probationary_date', 'full_member_date',
+  'activist_confirmed_date', 'activist_committee_filing_date', 'dev_target_confirmed_date',
+  'probationary_committee_pre_review_date', 'probationary_committee_approval_date',
+  'probationary_date', 'party_oath_date',
+  'full_member_committee_pre_review_date', 'full_member_branch_meeting_date',
+  'full_member_committee_approval_date', 'full_member_date',
 ]
 
 // 三个培训班结业日期字段
@@ -49,6 +64,8 @@ export default function MemberForm({ visible, viewOnly, initialValues, branches,
     if (!visible) return
     if (initialValues) {
       const vals = { ...initialValues }
+      vals.is_overseas = !!vals.is_overseas
+      vals.retain_party_membership = vals.retain_party_membership !== false
       DATE_FIELDS.forEach(f => {
         if (vals[f]) vals[f] = dayjs(vals[f])
       })
@@ -75,11 +92,16 @@ export default function MemberForm({ visible, viewOnly, initialValues, branches,
       if (user?.role !== 'super_admin') {
         form.setFieldValue('branch_id', user?.branch_id)
       }
+      form.setFieldValue('is_overseas', false)
+      form.setFieldValue('retain_party_membership', true)
     }
   }, [visible, initialValues])
 
   const onFinish = async (values) => {
     const data = { ...values }
+    BOOL_FORM_FIELDS.forEach(f => {
+      if (f in data) data[f] = data[f] === true || data[f] === 'true'
+    })
     DATE_FIELDS.forEach(f => {
       if (data[f]) data[f] = data[f].format('YYYY-MM-DD')
     })
@@ -168,7 +190,9 @@ export default function MemberForm({ visible, viewOnly, initialValues, branches,
           </Col>
           <Col span={12}>
             <Form.Item name="department" label="院系">
-              <Input />
+              <Select allowClear placeholder="请选择院系">
+                {DEPARTMENT_OPTIONS.map(v => <Option key={v} value={v}>{v}</Option>)}
+              </Select>
             </Form.Item>
           </Col>
           <Col span={12}>
@@ -187,8 +211,13 @@ export default function MemberForm({ visible, viewOnly, initialValues, branches,
             </Form.Item>
           </Col>
           <Col span={8}>
-            <Form.Item name="is_overseas" label="是否海外交流" valuePropName="checked">
-              <Switch checkedChildren="是" unCheckedChildren="否" />
+            <Form.Item name="is_overseas" label="是否海外交流" initialValue={false}>
+              <YesNoSelect />
+            </Form.Item>
+          </Col>
+          <Col span={8}>
+            <Form.Item name="retain_party_membership" label="是否保留党籍" initialValue={true}>
+              <YesNoSelect />
             </Form.Item>
           </Col>
           <Col span={12}>
@@ -202,15 +231,10 @@ export default function MemberForm({ visible, viewOnly, initialValues, branches,
             </Form.Item>
           </Col>
           <Col span={12}>
-            <Form.Item name="political_status" label="政治面貌">
-              <Select allowClear placeholder="请选择">
-                {POLITICAL_STATUS_OPTIONS.map(o => <Option key={o} value={o}>{o}</Option>)}
+            <Form.Item name="party_role_in_branch" label="党内职务">
+              <Select allowClear placeholder="请选择职务">
+                {PARTY_ROLE_OPTIONS.map(v => <Option key={v} value={v}>{v}</Option>)}
               </Select>
-            </Form.Item>
-          </Col>
-          <Col span={12}>
-            <Form.Item name="party_role_in_branch" label="党支部内职务">
-              <Input placeholder="如：党支书、组织委员" />
             </Form.Item>
           </Col>
         </Row>
@@ -229,7 +253,22 @@ export default function MemberForm({ visible, viewOnly, initialValues, branches,
             </Form.Item>
           </Col>
           <Col span={12}>
+            <Form.Item name="activist_committee_filing_date" label="入党积极分子党委备案日期">
+              <DatePicker style={{ width: '100%' }} format="YYYY-MM-DD" />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
             <Form.Item name="dev_target_confirmed_date" label="确定为发展对象日期">
+              <DatePicker style={{ width: '100%' }} format="YYYY-MM-DD" />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item name="probationary_committee_pre_review_date" label="接收预备党员党委预审日期">
+              <DatePicker style={{ width: '100%' }} format="YYYY-MM-DD" />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item name="probationary_committee_approval_date" label="接收预备党员党委审批日期">
               <DatePicker style={{ width: '100%' }} format="YYYY-MM-DD" />
             </Form.Item>
           </Col>
@@ -239,7 +278,27 @@ export default function MemberForm({ visible, viewOnly, initialValues, branches,
             </Form.Item>
           </Col>
           <Col span={12}>
-            <Form.Item name="full_member_date" label="转正为正式党员日期">
+            <Form.Item name="party_oath_date" label="入党宣誓日期">
+              <DatePicker style={{ width: '100%' }} format="YYYY-MM-DD" />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item name="full_member_committee_pre_review_date" label="预备党员转正党委预审日期">
+              <DatePicker style={{ width: '100%' }} format="YYYY-MM-DD" />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item name="full_member_branch_meeting_date" label="预备党员转正支部大会日期">
+              <DatePicker style={{ width: '100%' }} format="YYYY-MM-DD" />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item name="full_member_committee_approval_date" label="预备党员转正党委审批日期">
+              <DatePicker style={{ width: '100%' }} format="YYYY-MM-DD" />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item name="full_member_date" label="入党日期">
               <DatePicker style={{ width: '100%' }} format="YYYY-MM-DD" />
             </Form.Item>
           </Col>

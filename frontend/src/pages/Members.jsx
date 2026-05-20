@@ -28,21 +28,36 @@ const STAGE_COLORS = {
   '发展对象': 'orange', '预备党员': 'purple', '正式党员': 'green',
 }
 
-const POLITICAL_STATUS_OPTIONS = [
-  '入党申请人', '入党积极分子', '发展对象', '中共预备党员', '正式党员',
+const GENDER_OPTIONS = ['男', '女']
+const DEPARTMENT_OPTIONS = ['大数据学院', '类脑智能科学与技术研究院']
+const PARTY_ROLE_OPTIONS = [
+  '党支部书记', '党支部副书记', '组织委员', '宣传委员', '纪检委员',
 ]
+const TRAINING_STATUS_OPTIONS = ['未培训', '培训中', '已结业']
+
+const TRAINING_STATUS_COLORS = {
+  未培训: 'default',
+  培训中: 'processing',
+  已结业: 'success',
+}
+
+function getTrainingStatus(graduationDate, confirmedDate) {
+  if (graduationDate) return '已结业'
+  if (confirmedDate) return '培训中'
+  return '未培训'
+}
 
 // 培训班状态 Tag
 function TrainingTag({ graduationDate, confirmedDate }) {
-  if (graduationDate) return <Tag color="success">已结业</Tag>
-  if (confirmedDate)  return <Tag color="processing">培训中</Tag>
-  return <Tag color="default">未参加</Tag>
+  const status = getTrainingStatus(graduationDate, confirmedDate)
+  return <Tag color={TRAINING_STATUS_COLORS[status]}>{status}</Tag>
 }
 
 // 所有可用列定义
 const ALL_COLUMNS_DEF = [
   { key: 'name',                            title: '姓名',          width: 80,  fixed: 'left', alwaysShow: true },
   { key: 'student_id',                      title: '学号',          width: 120, alwaysShow: true },
+  { key: 'gender',                          title: '性别',          width: 60 },
   { key: 'branch_name',                     title: '党支部',        width: 150, superAdminOnly: true },
   { key: 'department',                      title: '院系',          width: 120, ellipsis: true },
   { key: 'major',                           title: '专业',          width: 120, ellipsis: true },
@@ -50,30 +65,41 @@ const ALL_COLUMNS_DEF = [
   { key: 'enrollment_year',                 title: '入学年份',      width: 85 },
   { key: 'expected_graduation',             title: '拟毕业年月',    width: 100 },
   { key: 'current_stage',                   title: '当前阶段',      width: 105 },
-  { key: 'political_status',                title: '政治面貌',      width: 110 },
   { key: 'application_date',                title: '递交申请书',    width: 110 },
   { key: 'youth_league_graduation_date',    title: '团校结业',      width: 100 },
   { key: 'youth_league_status',             title: '团校状态',      width: 90,  isTraining: true },
   { key: 'activist_confirmed_date',         title: '积极分子确立',  width: 110 },
+  { key: 'activist_committee_filing_date',  title: '积极分子党委备案', width: 150 },
   { key: 'activist_training_graduation_date', title: '积极分子培训结业', width: 130 },
   { key: 'activist_training_status',        title: '积极分子培训状态', width: 110, isTraining: true },
   { key: 'dev_target_confirmed_date',       title: '发展对象确立',  width: 110 },
   { key: 'dev_training_graduation_date',    title: '发展对象培训结业', width: 130 },
   { key: 'dev_training_status',             title: '发展对象培训状态', width: 110, isTraining: true },
+  { key: 'probationary_committee_pre_review_date', title: '接收预备党员党委预审', width: 150 },
+  { key: 'probationary_committee_approval_date',   title: '接收预备党员党委审批', width: 150 },
   { key: 'probationary_date',               title: '预备党员日期',  width: 110 },
-  { key: 'full_member_date',                title: '转正日期',      width: 100 },
+  { key: 'party_oath_date',                 title: '入党宣誓',      width: 100 },
+  { key: 'full_member_committee_pre_review_date',  title: '转正党委预审',  width: 120 },
+  { key: 'full_member_branch_meeting_date',        title: '转正支部大会',  width: 120 },
+  { key: 'full_member_committee_approval_date',    title: '转正党委审批',  width: 120 },
+  { key: 'full_member_date',                title: '入党日期',      width: 100 },
+  { key: 'retain_party_membership',         title: '是否保留党籍',  width: 110 },
   { key: 'phone',                           title: '联系电话',      width: 120, sensitive: true },
+  { key: 'email',                           title: '邮箱',          width: 160, sensitive: true, ellipsis: true },
   { key: 'is_overseas',                     title: '是否海外',      width: 80 },
   { key: 'updated_at',                      title: '更新时间',      width: 100 },
   { key: 'updated_by_username',             title: '操作人',        width: 90 },
   { key: 'party_role_in_branch',            title: '党内职务',      width: 100 },
+  { key: 'notes',                           title: '备注',          width: 150, ellipsis: true },
 ]
 
 // 默认显示列
 const DEFAULT_VISIBLE = new Set([
   'name', 'student_id', 'branch_name', 'current_stage',
+  'education_type', 'expected_graduation', 'full_member_date',
   'application_date', 'activist_confirmed_date',
   'dev_target_confirmed_date', 'probationary_date',
+  'retain_party_membership',
   'updated_at', 'updated_by_username',
 ])
 
@@ -82,13 +108,21 @@ const BATCH_FIELDS = [
   { value: 'application_date',               label: '递交入党申请书日期', type: 'date' },
   { value: 'youth_league_graduation_date',   label: '团校结业日期',       type: 'date' },
   { value: 'activist_confirmed_date',        label: '积极分子确立日期',   type: 'date' },
+  { value: 'activist_committee_filing_date', label: '入党积极分子党委备案日期', type: 'date' },
   { value: 'activist_training_graduation_date', label: '积极分子培训班结业日期', type: 'date' },
   { value: 'dev_target_confirmed_date',      label: '发展对象确立日期',   type: 'date' },
   { value: 'dev_training_graduation_date',   label: '发展对象培训班结业日期', type: 'date' },
+  { value: 'probationary_committee_pre_review_date', label: '接收预备党员党委预审日期', type: 'date' },
+  { value: 'probationary_committee_approval_date',   label: '接收预备党员党委审批日期', type: 'date' },
   { value: 'probationary_date',              label: '预备党员日期',       type: 'date' },
-  { value: 'full_member_date',               label: '正式党员日期',       type: 'date' },
+  { value: 'party_oath_date',                label: '入党宣誓日期',       type: 'date' },
+  { value: 'full_member_committee_pre_review_date',  label: '预备党员转正党委预审日期', type: 'date' },
+  { value: 'full_member_branch_meeting_date',        label: '预备党员转正支部大会日期', type: 'date' },
+  { value: 'full_member_committee_approval_date',      label: '预备党员转正党委审批日期', type: 'date' },
+  { value: 'full_member_date',               label: '入党日期',           type: 'date' },
   { value: 'expected_graduation',            label: '拟毕业年月',         type: 'month' },
-  { value: 'political_status',               label: '政治面貌',           type: 'select' },
+  { value: 'is_overseas',                    label: '是否海外交流',       type: 'yesno' },
+  { value: 'retain_party_membership',        label: '是否保留党籍',       type: 'yesno' },
 ]
 
 export default function Members() {
@@ -111,8 +145,14 @@ export default function Members() {
     branch_ids: [],
     stages: [],
     education_types: [],
+    gender: '',
     department: '',
+    party_role_in_branch: '',
+    youth_league_training_status: '',
+    activist_training_status: '',
+    dev_training_status: '',
     is_overseas: '',
+    retain_party_membership: '',
     application_date_range: null,   // [dayjs, dayjs]
     graduation_range: null,         // [dayjs, dayjs]
   })
@@ -140,8 +180,18 @@ export default function Members() {
     if (filters.branch_ids.length) p.branch_ids = filters.branch_ids.join(',')
     if (filters.stages.length) p.stages = filters.stages.join(',')
     if (filters.education_types.length) p.education_types = filters.education_types.join(',')
+    if (filters.gender) p.gender = filters.gender
     if (filters.department) p.department = filters.department
+    if (filters.party_role_in_branch) p.party_role_in_branch = filters.party_role_in_branch
+    if (filters.youth_league_training_status) {
+      p.youth_league_training_status = filters.youth_league_training_status
+    }
+    if (filters.activist_training_status) {
+      p.activist_training_status = filters.activist_training_status
+    }
+    if (filters.dev_training_status) p.dev_training_status = filters.dev_training_status
     if (filters.is_overseas) p.is_overseas = filters.is_overseas
+    if (filters.retain_party_membership) p.retain_party_membership = filters.retain_party_membership
     if (filters.application_date_range?.[0]) {
       p.application_date_start = filters.application_date_range[0].format('YYYY-MM-DD')
       p.application_date_end   = filters.application_date_range[1].format('YYYY-MM-DD')
@@ -257,8 +307,8 @@ export default function Members() {
 
       if (def.key === 'current_stage') {
         col.render = v => <Tag color={STAGE_COLORS[v] || 'default'}>{v}</Tag>
-      } else if (def.key === 'is_overseas') {
-        col.render = v => v ? <Tag color="cyan">是</Tag> : null
+      } else if (def.key === 'is_overseas' || def.key === 'retain_party_membership') {
+        col.render = v => (v ? <Tag color={def.key === 'is_overseas' ? 'cyan' : 'green'}>是</Tag> : <Tag>否</Tag>)
       } else if (def.key === 'updated_at') {
         col.render = v => v ? v.slice(0, 10) : ''
       } else if (def.key === 'youth_league_status') {
@@ -359,19 +409,61 @@ export default function Members() {
           </Select>
         </Col>
       )}
+      <Col flex="90px">
+        <Select placeholder="性别" style={{ width: '100%' }}
+          value={filters.gender || undefined}
+          onChange={v => setFilters(f => ({ ...f, gender: v || '' }))} allowClear>
+          {GENDER_OPTIONS.map(s => <Option key={s} value={s}>{s}</Option>)}
+        </Select>
+      </Col>
+      <Col flex="200px">
+        <Select placeholder="院系" style={{ width: '100%' }}
+          value={filters.department || undefined}
+          onChange={v => setFilters(f => ({ ...f, department: v || '' }))} allowClear>
+          {DEPARTMENT_OPTIONS.map(s => <Option key={s} value={s}>{s}</Option>)}
+        </Select>
+      </Col>
+      <Col flex="140px">
+        <Select mode="multiple" placeholder="学历" style={{ width: '100%' }}
+          value={filters.education_types} maxTagCount={1}
+          onChange={v => setFilters(f => ({ ...f, education_types: v }))} allowClear>
+          {['本科', '硕士', '博士'].map(s => <Option key={s} value={s}>{s}</Option>)}
+        </Select>
+      </Col>
+      <Col flex="130px">
+        <Select placeholder="党内职务" style={{ width: '100%' }}
+          value={filters.party_role_in_branch || undefined}
+          onChange={v => setFilters(f => ({ ...f, party_role_in_branch: v || '' }))} allowClear>
+          {PARTY_ROLE_OPTIONS.map(s => <Option key={s} value={s}>{s}</Option>)}
+        </Select>
+      </Col>
+      <Col flex="120px">
+        <Select placeholder="团校结业" style={{ width: '100%' }}
+          value={filters.youth_league_training_status || undefined}
+          onChange={v => setFilters(f => ({ ...f, youth_league_training_status: v || '' }))} allowClear>
+          {TRAINING_STATUS_OPTIONS.map(s => <Option key={s} value={s}>{s}</Option>)}
+        </Select>
+      </Col>
+      <Col flex="200px">
+        <Select placeholder="积极分子培训班结业" style={{ width: '100%' }}
+          value={filters.activist_training_status || undefined}
+          onChange={v => setFilters(f => ({ ...f, activist_training_status: v || '' }))} allowClear>
+          {TRAINING_STATUS_OPTIONS.map(s => <Option key={s} value={s}>{s}</Option>)}
+        </Select>
+      </Col>
+      <Col flex="180px">
+        <Select placeholder="发展对象培训班结业" style={{ width: '100%' }}
+          value={filters.dev_training_status || undefined}
+          onChange={v => setFilters(f => ({ ...f, dev_training_status: v || '' }))} allowClear>
+          {TRAINING_STATUS_OPTIONS.map(s => <Option key={s} value={s}>{s}</Option>)}
+        </Select>
+      </Col>
       <Col flex="200px">
         <Select mode="multiple" placeholder="发展阶段" style={{ width: '100%' }}
           value={filters.stages} maxTagCount={1}
           onChange={v => setFilters(f => ({ ...f, stages: v }))} allowClear>
           {['入党申请人','积极分子','发展对象','预备党员','正式党员'].map(s =>
             <Option key={s} value={s}>{s}</Option>)}
-        </Select>
-      </Col>
-      <Col flex="160px">
-        <Select mode="multiple" placeholder="学历" style={{ width: '100%' }}
-          value={filters.education_types} maxTagCount={2}
-          onChange={v => setFilters(f => ({ ...f, education_types: v }))} allowClear>
-          {['本科','硕士','博士'].map(s => <Option key={s} value={s}>{s}</Option>)}
         </Select>
       </Col>
       <Col flex="110px">
@@ -382,9 +474,13 @@ export default function Members() {
           <Option value="false">在国内</Option>
         </Select>
       </Col>
-      <Col flex="120px">
-        <Input placeholder="院系关键词" value={filters.department}
-          onChange={e => setFilters(f => ({ ...f, department: e.target.value }))} allowClear />
+      <Col flex="130px">
+        <Select placeholder="是否保留党籍" style={{ width: '100%' }}
+          value={filters.retain_party_membership || undefined}
+          onChange={v => setFilters(f => ({ ...f, retain_party_membership: v || '' }))} allowClear>
+          <Option value="true">是</Option>
+          <Option value="false">否</Option>
+        </Select>
       </Col>
       <Col flex="260px">
         <RangePicker placeholder={['申请书起始日', '申请书截止日']}
@@ -529,9 +625,15 @@ export default function Members() {
                     onChange={setBatchValue}
                   />
                 )}
-                {batchFieldDef?.type === 'select' && batchField === 'political_status' && (
-                  <Select style={{ width: '100%' }} value={batchValue} onChange={setBatchValue}>
-                    {POLITICAL_STATUS_OPTIONS.map(o => <Option key={o} value={o}>{o}</Option>)}
+                {batchFieldDef?.type === 'yesno' && (
+                  <Select
+                    style={{ width: '100%' }}
+                    placeholder="请选择"
+                    value={batchValue}
+                    onChange={setBatchValue}
+                  >
+                    <Option value={true}>是</Option>
+                    <Option value={false}>否</Option>
                   </Select>
                 )}
               </Form.Item>

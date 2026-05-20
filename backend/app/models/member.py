@@ -23,19 +23,26 @@ class Member(db.Model):
     expected_graduation = db.Column(db.String(7), nullable=True)  # 拟毕业年月 YYYY-MM
     phone = db.Column(db.String(20), default="")            # 敏感
     email = db.Column(db.String(120), default="")           # 敏感
-    political_status = db.Column(db.String(30), default="") # 政治面貌（手动维护）
     party_role_in_branch = db.Column(db.String(50), default="")
     is_overseas = db.Column(db.Boolean, default=False)
+    retain_party_membership = db.Column(db.Boolean, default=True)  # 是否保留党籍
 
     # ── 发展进度日期 ──────────────────────────────────────────
     application_date = db.Column(db.Date, nullable=True)                    # 递交入党申请书
     youth_league_graduation_date = db.Column(db.Date, nullable=True)        # 团校结业
     activist_confirmed_date = db.Column(db.Date, nullable=True)             # 积极分子确立
+    activist_committee_filing_date = db.Column(db.Date, nullable=True)      # 入党积极分子党委备案
     activist_training_graduation_date = db.Column(db.Date, nullable=True)   # 积极分子培训班结业
     dev_target_confirmed_date = db.Column(db.Date, nullable=True)           # 发展对象确立
     dev_training_graduation_date = db.Column(db.Date, nullable=True)        # 发展对象培训班结业
-    probationary_date = db.Column(db.Date, nullable=True)                   # 预备党员
-    full_member_date = db.Column(db.Date, nullable=True)                    # 正式党员
+    probationary_committee_pre_review_date = db.Column(db.Date, nullable=True)   # 接收预备党员党委预审
+    probationary_committee_approval_date = db.Column(db.Date, nullable=True)     # 接收预备党员党委审批
+    probationary_date = db.Column(db.Date, nullable=True)                        # 接收为预备党员
+    party_oath_date = db.Column(db.Date, nullable=True)                           # 入党宣誓
+    full_member_committee_pre_review_date = db.Column(db.Date, nullable=True)   # 预备党员转正党委预审
+    full_member_branch_meeting_date = db.Column(db.Date, nullable=True)          # 预备党员转正支部大会
+    full_member_committee_approval_date = db.Column(db.Date, nullable=True)      # 预备党员转正党委审批
+    full_member_date = db.Column(db.Date, nullable=True)                         # 入党日期
 
     # ── 其他 ──────────────────────────────────────────────────
     extra_data = db.Column(db.JSON, default=dict)
@@ -82,18 +89,25 @@ class Member(db.Model):
             "education_type": self.education_type,
             "enrollment_year": self.enrollment_year,
             "expected_graduation": self.expected_graduation,
-            "political_status": self.political_status,
             "party_role_in_branch": self.party_role_in_branch,
             "is_overseas": self.is_overseas,
+            "retain_party_membership": self.retain_party_membership,
             "current_stage": self.current_stage,
             # 发展进度日期
             "application_date": self.application_date.isoformat() if self.application_date else None,
             "youth_league_graduation_date": self.youth_league_graduation_date.isoformat() if self.youth_league_graduation_date else None,
             "activist_confirmed_date": self.activist_confirmed_date.isoformat() if self.activist_confirmed_date else None,
+            "activist_committee_filing_date": self.activist_committee_filing_date.isoformat() if self.activist_committee_filing_date else None,
             "activist_training_graduation_date": self.activist_training_graduation_date.isoformat() if self.activist_training_graduation_date else None,
             "dev_target_confirmed_date": self.dev_target_confirmed_date.isoformat() if self.dev_target_confirmed_date else None,
             "dev_training_graduation_date": self.dev_training_graduation_date.isoformat() if self.dev_training_graduation_date else None,
+            "probationary_committee_pre_review_date": self.probationary_committee_pre_review_date.isoformat() if self.probationary_committee_pre_review_date else None,
+            "probationary_committee_approval_date": self.probationary_committee_approval_date.isoformat() if self.probationary_committee_approval_date else None,
             "probationary_date": self.probationary_date.isoformat() if self.probationary_date else None,
+            "party_oath_date": self.party_oath_date.isoformat() if self.party_oath_date else None,
+            "full_member_committee_pre_review_date": self.full_member_committee_pre_review_date.isoformat() if self.full_member_committee_pre_review_date else None,
+            "full_member_branch_meeting_date": self.full_member_branch_meeting_date.isoformat() if self.full_member_branch_meeting_date else None,
+            "full_member_committee_approval_date": self.full_member_committee_approval_date.isoformat() if self.full_member_committee_approval_date else None,
             "full_member_date": self.full_member_date.isoformat() if self.full_member_date else None,
             "extra_data": self.extra_data or {},
             "notes": self.notes,

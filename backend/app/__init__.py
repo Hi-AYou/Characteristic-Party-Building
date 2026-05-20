@@ -88,9 +88,47 @@ def create_app():
     # 建表
     with app.app_context():
         db.create_all()
+        _migrate_schema()
         _seed_initial_data()
 
     return app
+
+
+_MEMBER_BOOL_COLUMNS = ("retain_party_membership",)
+
+_MEMBER_DATE_COLUMNS = (
+    "activist_committee_filing_date",
+    "probationary_committee_pre_review_date",
+    "probationary_committee_approval_date",
+    "party_oath_date",
+    "full_member_committee_pre_review_date",
+    "full_member_branch_meeting_date",
+    "full_member_committee_approval_date",
+)
+
+
+def _migrate_schema():
+    """为已有数据库补充新增列（SQLite create_all 不会自动 ALTER）"""
+    from sqlalchemy import inspect, text
+
+    insp = inspect(db.engine)
+    if "members" not in insp.get_table_names():
+        return
+    cols = {c["name"] for c in insp.get_columns("members")}
+    for col in _MEMBER_DATE_COLUMNS:
+        if col in cols:
+            continue
+        with db.engine.connect() as conn:
+            conn.execute(text(f"ALTER TABLE members ADD COLUMN {col} DATE"))
+            conn.commit()
+    for col in _MEMBER_BOOL_COLUMNS:
+        if col in cols:
+            continue
+        with db.engine.connect() as conn:
+            conn.execute(
+                text(f"ALTER TABLE members ADD COLUMN {col} BOOLEAN DEFAULT 1")
+            )
+            conn.commit()
 
 
 def _seed_initial_data():

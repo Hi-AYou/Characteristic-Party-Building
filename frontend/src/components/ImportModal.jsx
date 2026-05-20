@@ -61,7 +61,7 @@ export default function ImportModal({ visible, branches, onClose, onSuccess }) {
         type="info"
         showIcon
         message="说明"
-        description="Excel 第一行为字段名，支持的列名包括：姓名、学号、性别、院系、专业、出生日期、学历层次、入学年份、联系电话、邮箱、政治面貌、党支部内职务、是否海外交流、递交入党申请书日期、积极分子确立日期等。未识别的列将保留在扩展字段中。"
+        description="Excel 第一行为字段名，支持的列名包括：姓名、学号、性别、院系、专业、出生日期、学历层次、入学年份、联系电话、邮箱、党支部内职务、是否海外交流、递交入党申请书日期、积极分子确立日期等。未识别的列将保留在扩展字段中。"
         style={{ marginBottom: 16 }}
       />
 
